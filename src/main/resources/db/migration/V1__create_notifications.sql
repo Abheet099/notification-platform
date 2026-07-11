@@ -6,9 +6,9 @@ CREATE TABLE notifications (
     status VARCHAR(32) NOT NULL,
     provider_message_id VARCHAR(255),
     failure_reason TEXT,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL,
-    sent_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    sent_at TIMESTAMPTZ,
     CONSTRAINT notifications_status_check CHECK (status IN ('ACCEPTED', 'PROCESSING', 'SENT', 'FAILED'))
 );
 
