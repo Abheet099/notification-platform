@@ -68,10 +68,22 @@ Get one notification:
 curl http://localhost:8080/api/v1/notifications/<notification-id>
 ```
 
-List notifications:
+List notifications with pagination:
 
 ```bash
-curl http://localhost:8080/api/v1/notifications
+curl 'http://localhost:8080/api/v1/notifications?page=0&size=20'
+```
+
+Filter notifications by status:
+
+```bash
+curl 'http://localhost:8080/api/v1/notifications?status=SENT'
+```
+
+Filter notifications by recipient text:
+
+```bash
+curl 'http://localhost:8080/api/v1/notifications?recipient=user@example.com'
 ```
 
 The mock provider marks normal recipients as `SENT`. Use an address containing `fail`, such as `fail@example.com`, to exercise the `FAILED` path.
