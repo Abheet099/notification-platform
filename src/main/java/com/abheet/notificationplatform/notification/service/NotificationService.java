@@ -4,12 +4,14 @@ import com.abheet.notificationplatform.common.exception.ResourceNotFoundExceptio
 import com.abheet.notificationplatform.notification.async.NotificationAsyncProcessor;
 import com.abheet.notificationplatform.notification.dto.CreateNotificationRequest;
 import com.abheet.notificationplatform.notification.dto.NotificationResponse;
+import com.abheet.notificationplatform.notification.dto.PagedResponse;
 import com.abheet.notificationplatform.notification.entity.Notification;
+import com.abheet.notificationplatform.notification.entity.NotificationStatus;
 import com.abheet.notificationplatform.notification.mapper.NotificationMapper;
 import com.abheet.notificationplatform.notification.repository.NotificationRepository;
-import java.util.List;
 import java.util.UUID;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -53,10 +55,39 @@ public class NotificationService {
     }
 
     @Transactional(readOnly = true)
-    public List<NotificationResponse> list() {
-        return notificationRepository.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
-                .stream()
-                .map(notificationMapper::toResponse)
-                .toList();
+    public PagedResponse<NotificationResponse> list(
+            NotificationStatus status,
+            String recipient,
+            Pageable pageable
+    ) {
+        Page<Notification> notificationPage = findNotifications(status, recipient, pageable);
+        Page<NotificationResponse> responsePage = notificationPage.map(notificationMapper::toResponse);
+        return new PagedResponse<>(
+                responsePage.getContent(),
+                responsePage.getNumber(),
+                responsePage.getSize(),
+                responsePage.getTotalElements(),
+                responsePage.getTotalPages(),
+                responsePage.isFirst(),
+                responsePage.isLast()
+        );
+    }
+
+    private Page<Notification> findNotifications(
+            NotificationStatus status,
+            String recipient,
+            Pageable pageable
+    ) {
+        boolean hasRecipient = recipient != null && !recipient.isBlank();
+        if (status != null && hasRecipient) {
+            return notificationRepository.findByStatusAndRecipientContainingIgnoreCase(status, recipient, pageable);
+        }
+        if (status != null) {
+            return notificationRepository.findByStatus(status, pageable);
+        }
+        if (hasRecipient) {
+            return notificationRepository.findByRecipientContainingIgnoreCase(recipient, pageable);
+        }
+        return notificationRepository.findAll(pageable);
     }
 }
