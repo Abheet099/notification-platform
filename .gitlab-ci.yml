@@ -1,0 +1,30 @@
+image: maven:3.9.9-eclipse-temurin-21
+
+stages:
+  - verify
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end --show-version"
+
+cache:
+  key: "$CI_COMMIT_REF_SLUG"
+  paths:
+    - .m2/repository/
+
+maven-verify:
+  stage: verify
+  script:
+    - mvn $MAVEN_CLI_OPTS clean verify
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - target/surefire-reports/TEST-*.xml
+    paths:
+      - target/surefire-reports/
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_TAG'
