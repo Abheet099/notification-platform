@@ -51,3 +51,27 @@ mvn clean verify
 ## Notes
 
 The notification APIs are intentionally not implemented in the initial project setup change. The first Flyway migration creates the notification table shape needed by the MVP.
+
+## Notification API
+
+Create an email notification:
+
+```bash
+curl -i -X POST http://localhost:8080/api/v1/notifications \
+  -H 'Content-Type: application/json' \
+  -d '{"recipient":"user@example.com","subject":"Welcome","body":"Hello from the notification platform"}'
+```
+
+Get one notification:
+
+```bash
+curl http://localhost:8080/api/v1/notifications/<notification-id>
+```
+
+List notifications:
+
+```bash
+curl http://localhost:8080/api/v1/notifications
+```
+
+The mock provider marks normal recipients as `SENT`. Use an address containing `fail`, such as `fail@example.com`, to exercise the `FAILED` path.
