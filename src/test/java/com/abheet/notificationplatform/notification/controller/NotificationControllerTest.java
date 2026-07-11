@@ -1,6 +1,5 @@
 package com.abheet.notificationplatform.notification.controller;
 
-import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
@@ -117,8 +116,74 @@ class NotificationControllerTest {
 
         mockMvc.perform(get("/api/v1/notifications"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].recipient").value("list@example.com"));
+                .andExpect(jsonPath("$.content[0].recipient").value("list@example.com"))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(20))
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.first").value(true))
+                .andExpect(jsonPath("$.last").value(true));
+    }
+
+
+    @Test
+    void paginatesNotifications() throws Exception {
+        createNotification("first@example.com", "First", "First body");
+        createNotification("second@example.com", "Second", "Second body");
+        createNotification("third@example.com", "Third", "Third body");
+
+        mockMvc.perform(get("/api/v1/notifications")
+                        .param("page", "0")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.size").value(2))
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(2))
+                .andExpect(jsonPath("$.first").value(true))
+                .andExpect(jsonPath("$.last").value(false));
+    }
+
+    @Test
+    void filtersNotificationsByStatus() throws Exception {
+        createNotification("accepted@example.com", "Accepted", "Accepted body");
+
+        mockMvc.perform(get("/api/v1/notifications")
+                        .param("status", "ACCEPTED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].status").value("ACCEPTED"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void filtersNotificationsByRecipient() throws Exception {
+        createNotification("alpha@example.com", "Alpha", "Alpha body");
+        createNotification("beta@example.com", "Beta", "Beta body");
+
+        mockMvc.perform(get("/api/v1/notifications")
+                        .param("recipient", "alp"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].recipient").value("alpha@example.com"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void rejectsInvalidStatusFilter() throws Exception {
+        mockMvc.perform(get("/api/v1/notifications")
+                        .param("status", "DELIVERED"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Invalid value for parameter 'status'"));
+    }
+
+    @Test
+    void rejectsInvalidPageSize() throws Exception {
+        mockMvc.perform(get("/api/v1/notifications")
+                        .param("size", "0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"));
     }
 
     @Test
@@ -127,4 +192,18 @@ class NotificationControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Notification not found: 00000000-0000-0000-0000-000000000000"));
     }
+
+    private void createNotification(String recipient, String subject, String body) throws Exception {
+        mockMvc.perform(post("/api/v1/notifications")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "recipient": "%s",
+                                  "subject": "%s",
+                                  "body": "%s"
+                                }
+                                """.formatted(recipient, subject, body)))
+                .andExpect(status().isCreated());
+    }
+
 }
